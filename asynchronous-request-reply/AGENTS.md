@@ -1,30 +1,69 @@
 # Asynchronous Request-Reply Pattern Agents
 
 ## Scope
-These instructions apply to every file in this folder. Build only software, examples, tests, and documentation that implement the Asynchronous Request-Reply pattern.
+These instructions apply to every file in this folder. Build only software, examples, tests, and documentation that implement the Asynchronous Request-Reply pattern. Treat this file as the architectural contract for this subtree.
 
-Source: https://learn.microsoft.com/en-us/azure/architecture/patterns/asynchronous-request-reply
+## Source Material
+- Microsoft Learn pattern page: https://learn.microsoft.com/en-us/azure/architecture/patterns/asynchronous-request-reply
+- Supporting architecture guidance: https://learn.microsoft.com/en-us/azure/architecture/patterns/
+- Supporting architecture guidance: https://learn.microsoft.com/en-us/azure/well-architected/reliability/design-patterns
 
-## Pattern Boundary
-Use this pattern when a caller needs a timely acknowledgement for work that must continue asynchronously after the initial request.
+## Pattern Intent
+Accept a request quickly, process it asynchronously, and let the caller monitor status until a final result is available.
 
-The initial endpoint accepts and validates work, returns a status location, and delegates processing to a background component. The caller checks status and later retrieves the result or failure.
+## LLM Operating Contract
+- First decide whether the requested work fits this pattern. If it does not fit, say so and propose the closest pattern folder instead of forcing the design.
+- Keep the pattern as the primary architecture. Related patterns may support it only when their role is named and bounded.
+- Prefer platform capabilities and well-known libraries over custom mechanisms when they preserve the pattern invariants.
+- Make failure handling, observability, security, and operational ownership explicit. Do not leave them as TODOs in pattern-critical paths.
+- Use precise names for pattern roles in code, diagrams, and explanations so reviewers can see the pattern boundary.
+- When trade-offs are unavoidable, document the trade-off and the reason it is acceptable for this pattern.
 
-## Required Shape
-- Provide an acceptor endpoint that validates the request before starting work.
-- Return an accepted response with a status resource location and clear polling guidance.
-- Separate the long-running worker from the request path.
-- Model status states such as pending, running, succeeded, failed, and canceled.
-- Persist enough status, result, and error information for reliable polling.
-- Make duplicate submissions safe through idempotency keys or equivalent correlation.
+## Applicability Gate
+Use this pattern only when:
+- The caller needs a timely acknowledgement but the work might exceed the request timeout or latency budget.
+- The caller can poll, follow a status resource, or otherwise retrieve completion later.
+- The system can persist status and correlate the request with background processing.
 
-## Do Not Build
-- Do not block the initial request until long-running work finishes.
-- Do not hide asynchronous state behind a synchronous facade unless that facade is the explicit deliverable.
-- Do not use this folder for real-time streaming, push callbacks, or generic queue processing unless request-reply polling remains central.
-- Do not return success before validation of the initial request.
+Do not use this pattern when:
+- The caller requires immediate completion in the initial response.
+- The interaction is continuous streaming or server push rather than request, status, result.
+- The system cannot reliably persist status, result, and failure state.
 
-## Review Checklist
-- The client receives a stable status URL or equivalent status reference.
-- Background processing can fail without losing the final observable state.
-- Polling behavior avoids unnecessary load and exposes terminal outcomes clearly.
+## Architecture Invariants
+- The acceptor validates the request before returning an accepted response.
+- The response includes a stable status reference, correlation ID, and polling guidance.
+- The worker is separate from the initial request path and can recover after restart.
+- Status states are explicit, including pending, running, succeeded, failed, canceled, and expired when relevant.
+
+## Implementation Requirements
+- Identify the concrete participants, resources, and boundaries before writing code.
+- Encode the pattern boundary in modules, interfaces, deployment units, configuration, or infrastructure, not only in comments.
+- Make retries, timeouts, cancellation, idempotency, authorization, and correlation explicit where the pattern touches distributed calls or messages.
+- Keep business rules in the component that owns the business capability; do not move them into infrastructure glue unless this pattern specifically calls for that ownership.
+- Provide examples and tests that demonstrate the happy path, boundary enforcement, and at least one realistic failure path.
+
+## Failure, Consistency, and Operations
+- Use idempotency keys or equivalent duplicate-submission protection.
+- Store terminal results and errors long enough for clients to observe them.
+- Protect the status endpoint from hot polling with retry-after, backoff, caching, or quotas.
+- Define cancellation, expiration, cleanup, and authorization for status resources.
+
+## Pattern Boundaries and Common Confusions
+- Queue-Based Load Leveling buffers work; Asynchronous Request-Reply defines the client-facing status contract.
+- Publisher-Subscriber announces events; this pattern keeps a specific caller tied to a specific request outcome.
+- Returning 202 without durable status tracking is not this pattern.
+
+## Verification Checklist
+- Can a client recover the result after losing the original connection?
+- Are duplicate submissions safe?
+- Do tests cover accepted, invalid, running, failed, canceled, and successful requests?
+- Does the implementation still match the pattern if the technology choices are replaced?
+- Are the operational signals sufficient for an on-call engineer to diagnose pattern-specific failure?
+- Are tests focused on the pattern guarantees rather than only line coverage?
+
+## Response Requirements For Agents
+- In design responses, name the pattern roles and the reason this pattern is a fit.
+- In code responses, point to the files that enforce the pattern boundary.
+- If asked to add behavior that violates an invariant, stop and describe the conflict before changing files.
+- If combining patterns, state which pattern is primary in this folder and which patterns are only supporting mechanisms.

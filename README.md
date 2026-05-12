@@ -54,6 +54,23 @@ sidecar/AGENTS.md
 The intent is that work inside `retry/` stays focused on the Retry pattern,
 work inside `saga/` stays focused on the Saga pattern, and so on.
 
+## Instruction Format
+
+Each pattern `AGENTS.md` is structured for LLM use. The files include:
+
+- source material links for the pattern
+- a concise pattern intent
+- an LLM operating contract
+- applicability and non-applicability gates
+- architecture invariants
+- implementation requirements
+- failure, consistency, and operations guidance
+- common confusions with adjacent patterns
+- verification checks for reviewing generated work
+
+The goal is to make the correct architecture easier for an agent to follow and
+make pattern drift easier for reviewers to catch.
+
 ## Pattern Catalog
 
 | Pattern | Local instructions | Microsoft Learn |
